@@ -1,0 +1,48 @@
+name: Trigger auto deployment for tatva-pmsusers-evalus
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - '**'
+    - '.github/workflows/tatva-pmsusers-evalus-AutoDeployTrigger-17ca927d-679c-45c5-be1b-ce2c16d055c2.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.TATVAPMSUSERSEVALUS_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TATVAPMSUSERSEVALUS_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TATVAPMSUSERSEVALUS_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          registryUrl: snapai.azurecr.io
+          registryUsername: ${{ secrets.TATVAPMSUSERSEVALUS_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.TATVAPMSUSERSEVALUS_REGISTRY_PASSWORD }}
+          containerAppName: tatva-pmsusers-evalus
+          resourceGroup: tatva-prod
+          imageToBuild: snapai.azurecr.io/tatva-pmsusers-evalus:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
